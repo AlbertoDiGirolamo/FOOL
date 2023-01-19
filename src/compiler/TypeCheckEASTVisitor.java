@@ -177,7 +177,8 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 			throw new TypeException("Non integers in minus",n.getLine());
 		return new IntTypeNode();
 	}
-
+//controlla che il tipo sia di una funzione. Poi controlla che gli argomenti passati al callNode (contenuti come sttributo arglist
+	//dell'oggetto) combacino con quelli della signature contenuti nell'arrowtypenode (parlist)
 	@Override
 	public TypeNode visitNode(CallNode n) throws TypeException {
 		if (print) printNode(n,n.id);

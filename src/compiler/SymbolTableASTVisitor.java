@@ -191,7 +191,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 			System.out.println("Fun id " + n.id + " at line "+ n.getLine() + " not declared");
 			stErrors++;
 		} else {
-			n.entry = entry;
+			n.entry = entry; //arricchimento albero
 			n.nl = nestingLevel;
 		}
 		for (Node arg : n.arglist) visit(arg);
@@ -206,7 +206,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 			System.out.println("Var or Par id " + n.id + " at line "+ n.getLine() + " not declared");
 			stErrors++;
 		} else {
-			n.entry = entry;
+			n.entry = entry; //arricchimento albero
 			n.nl = nestingLevel;
 		}
 		return null;
