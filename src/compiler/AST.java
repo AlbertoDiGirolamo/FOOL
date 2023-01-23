@@ -235,10 +235,13 @@ public class AST {
 
 	public static class ClassNode extends Node{
 
+		String id;
+
 		List<FieldNode> fields;
 		List<MethodNode> methods;
 
-		ClassNode(List<FieldNode> f, List<MethodNode> m){
+		ClassNode(String id_class, List<FieldNode> f, List<MethodNode> m){
+			id = id_class;
 			fields = Collections.unmodifiableList(f);
 			methods = Collections.unmodifiableList(m);
 		}
@@ -264,6 +267,8 @@ public class AST {
 		final List<ParNode> parlist;
 		final List<DecNode> declist;
 		final Node exp;
+
+		int offset;
 		MethodNode(String i, TypeNode rt, List<ParNode> pl, List<DecNode> dl, Node e) {
 			id=i;
 			retType=rt;
@@ -271,9 +276,7 @@ public class AST {
 			declist=Collections.unmodifiableList(dl);
 			exp=e;
 		}
-
 		//void setType(TypeNode t) {type = t;}
-
 		@Override
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
 	}
@@ -283,6 +286,7 @@ public class AST {
 		final String id_method;
 		final List<Node> arglist;
 		STentry entry;
+		STentry methodEntry;
 		int nl;
 		ClassCallNode(String i_obj, String i_method, List<Node> p) {
 			id_obj = i_obj;
@@ -298,6 +302,7 @@ public class AST {
 		String id_class;
 
 		List<FieldNode> fields;
+		STentry entry;
 
 		NewNode(String id, List<FieldNode> f){
 			id_class = id;
@@ -328,6 +333,31 @@ public class AST {
 		RefTypeNode(String id){
 			id_class=id;
 		}
+		@Override
+		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
+	}
+
+
+	public static class MethodTypeNode extends TypeNode {
+		final ArrowTypeNode fun;
+
+
+		MethodTypeNode(ArrowTypeNode f){
+			fun = f;
+		}
+		@Override
+		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
+	}
+
+	public static class ClassTypeNode extends TypeNode{
+		ArrayList<TypeNode> allFields;
+		ArrayList<ArrowTypeNode> allMethods;
+		ClassTypeNode(ArrayList<TypeNode> f, ArrayList<ArrowTypeNode> m){
+			allFields = f;
+			allMethods = m;
+
+		}
+
 		@Override
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
 	}

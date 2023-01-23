@@ -112,7 +112,7 @@ public class ASTGenerationSTVisitor extends FOOLBaseVisitor<Node> {
 		if (print) printVarAndProdName(c);
 		Node n = null;
 		if (c.ID()!=null) { //non-incomplete ST
-			n = new VarNode(c.ID().getText(), (TypeNode) visit(c.type()), visit(c.exp()));
+			n = new VarNode(c.ID().getText(), (TypeNode) visit(c.type()), visit(c.exp())); // viene castato a TypeNode perchè deve rimanere generico
 			n.setLine(c.VAR().getSymbol().getLine());
 		}
         return n;
