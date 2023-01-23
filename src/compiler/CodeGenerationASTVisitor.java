@@ -3,6 +3,9 @@ package compiler;
 import compiler.AST.*;
 import compiler.lib.*;
 import compiler.exc.*;
+
+import java.util.ArrayList;
+
 import static compiler.lib.FOOLlib.*;
 
 public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidException> {
@@ -62,6 +65,67 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 			)
 		);
 		return "push "+funl;		
+	}
+
+	@Override
+	public String visitNode(MethodNode n) {//per ogni metodo restituisce il codice macchina
+		if (print) printNode(n,n.id);
+		String declCode = null, popDecl = null, popParl = null;
+		for (Node dec : n.declist) {
+			declCode = nlJoin(declCode,visit(dec));
+			popDecl = nlJoin(popDecl,"pop");
+		}
+		for (int i=0;i<n.parlist.size();i++) popParl = nlJoin(popParl,"pop");
+		String label = freshFunLabel();
+		n.label = label;
+		putCode(
+				nlJoin(
+						label+":",
+						"cfp", // set $fp to $sp value
+						"lra", // load $ra value
+						declCode, // generate code for local declarations (they use the new $fp!!!)
+						visit(n.exp), // generate code for function body expression
+						"stm", // set $tm to popped value (function result)
+						popDecl, // remove local declarations from stack
+						"sra", // set $ra to popped value
+						"pop", // remove Access Link from stack
+						popParl, // remove parameters from stack
+						"sfp", // set $fp to popped value (Control Link)
+						"ltm", // load $tm value (function result)
+						"lra", // load $ra value
+						"js"  // jump to to popped address
+				)
+		);
+		return null;
+	}
+
+	@Override
+	public String visitNode(ClassNode n){
+		ArrayList<String> dispatchTable = new ArrayList<>();
+		for(MethodNode method: n.methods){
+			visit(method);
+			String label = method.label;
+			int offset = method.offset;
+			dispatchTable.add(offset,label);
+		}
+		String labelsCode = null;
+
+		for(String label : dispatchTable){
+			String lCode = nlJoin(
+					"push " +label,//aggiunge l'etichetta allo stack
+					"lhp",//aggiunge l'indirizzo hp a cui metterla
+					"sw",//inserisce label all'indirizzo hp
+					"lhp",//inserisce hp sullo stack
+					"push 1", //inserisce 1 sullo stack
+					"add",//incrementa hp e lo rimette sullo stack
+					"shp" // si alva nel registro il valore incrementato di hp
+			);
+			labelsCode = nlJoin(label, lCode);
+		}//alla fine si lo stack è vuoto e avrà solamente al dipspatch pointer .....SU DIARIO.....
+		return nlJoin(
+				"lhp",
+				labelsCode
+		);
 	}
 
 	@Override
