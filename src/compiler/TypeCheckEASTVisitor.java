@@ -238,7 +238,8 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 	public TypeNode visitNode(EmptyTypeNode n) throws TypeException{
 		//quando incontro un null restituisce un EmptyTypeNode
 		//Queste sono tutte foglie
-		return new EmptyTypeNode();
+		if(print) printNode(n);
+		return null;//TODO forse deve restituire new EmptyTypeNode()
 	}
 
 	@Override
@@ -281,6 +282,25 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 	@Override
 	public TypeNode visitNode(IntTypeNode n) {
 		if (print) printNode(n);
+		return null;
+	}
+
+	@Override
+	public TypeNode visitNode(ClassTypeNode n) throws TypeException{
+		if (print) printNode(n);
+		for(TypeNode f : n.allFields) visit(f);
+		for(ArrowTypeNode m : n.allMethods) visit(m);
+		return null;
+	}
+	@Override
+	public TypeNode visitNode(EmptyNode n) {
+		if (print) printNode(n);
+		return new EmptyTypeNode();
+	}
+
+	@Override
+	public TypeNode visitNode(RefTypeNode n) {
+		if (print) printNode(n, n.id_class);
 		return null;
 	}
 

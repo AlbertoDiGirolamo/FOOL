@@ -91,6 +91,11 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 	}
 
 	@Override
+	public Void visitNode(EmptyNode n) {
+		if (print) printNode(n);
+		return null;
+	}
+	@Override
 	public Void visitNode(PrintNode n) {
 		if (print) printNode(n);
 		visit(n.exp);
@@ -238,7 +243,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 			stErrors++;
 		}
 		HashMap<String, STentry> virtualTable = new HashMap<>();
-		classTable.put(n.id, new HashMap<>());
+		classTable.put(n.id, virtualTable);
 
 		nestingLevel++;
 		symTable.add(virtualTable);
@@ -247,13 +252,12 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 
 		int fildOffset = -1;
 		for (FieldNode field : n.fields) {
-			//TODO aggiornare il ClassTypeNode
-
-			if (virtualTable.put(field.id, new STentry(nestingLevel, field.getType(), fildOffset--)) != null) {
+			if (virtualTable.put(field.id, new STentry(nestingLevel, field.getType(), fildOffset)) != null) {
 				System.out.println("Field id " + field.id + " at line " + n.getLine() + " already declared");
 				stErrors++;
 			}
 			type.allFields.add(-fildOffset-1, field.getType());
+			fildOffset--;
 		}
 		for(MethodNode method : n.methods){
 			visit(method);
@@ -325,7 +329,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 			RefTypeNode refTypeNode = (RefTypeNode) n.entry.type;
 			STentry methodEntry =  classTable.get(refTypeNode.id_class).get(n.id_method);//presa una classe ci da una mappa con tutti i campi e i metodi
 			if (methodEntry == null) {
-				System.out.println("Var or Par id " + n.id_obj+ " at line "+ n.getLine() + " not declared");
+				System.out.println("Method id " + n.id_method+ " at line "+ n.getLine() + " not declared");
 				stErrors++;
 			} else {
 				n.methodEntry = methodEntry; //arricchimento albero
@@ -343,6 +347,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 		if(classTable.containsKey(n.id_class)){
 			STentry entry = symTable.get(0).get(n.id_class); //StEntry presa al livello 0 della SymbleTable (le classi sono dichiarate al livello 0). facendo .get(nome della classe) ottengo la signature della classe che ci interessa
 			n.entry = entry;
+			for(Node f : n.fields) visit(f);
 		}
 
 		return null;

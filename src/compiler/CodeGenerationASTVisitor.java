@@ -3,6 +3,7 @@ package compiler;
 import compiler.AST.*;
 import compiler.lib.*;
 import compiler.exc.*;
+import svm.ExecuteVM;
 
 import java.util.ArrayList;
 
@@ -12,6 +13,9 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 
   CodeGenerationASTVisitor() {}
   CodeGenerationASTVisitor(boolean debug) {super(false,debug);} //enables print for debugging
+
+//tutti i  metodi restituiscono una stringa eccetoto per le funzioni e per i metodi ce restituisce putcode
+	//putcode è una variabile che contiene il corpo della funzione e del metodo.
 
 	@Override
 	public String visitNode(ProgLetInNode n) {
@@ -72,11 +76,11 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		if (print) printNode(n,n.id);
 		String declCode = null, popDecl = null, popParl = null;
 		for (Node dec : n.declist) {
-			declCode = nlJoin(declCode,visit(dec));
+			declCode = nlJoin(declCode,visit(dec));//crea codice delle dichiarazioni e le salva in una stringa
 			popDecl = nlJoin(popDecl,"pop");
 		}
 		for (int i=0;i<n.parlist.size();i++) popParl = nlJoin(popParl,"pop");
-		String label = freshFunLabel();
+		String label = freshFunLabel();//label mantiene l'indirizzo
 		n.label = label;
 		putCode(
 				nlJoin(
@@ -111,7 +115,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		String labelsCode = null;
 
 		for(String label : dispatchTable){
-			String lCode = nlJoin(
+			labelsCode = nlJoin(labelsCode, nlJoin(
 					"push " +label,//aggiunge l'etichetta allo stack
 					"lhp",//aggiunge l'indirizzo hp a cui metterla
 					"sw",//inserisce label all'indirizzo hp
@@ -119,8 +123,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 					"push 1", //inserisce 1 sullo stack
 					"add",//incrementa hp e lo rimette sullo stack
 					"shp" // si alva nel registro il valore incrementato di hp
-			);
-			labelsCode = nlJoin(label, lCode);
+			));
 		}//alla fine si lo stack è vuoto e avrà solamente al dipspatch pointer .....SU DIARIO.....
 		return nlJoin(
 				"lhp",
@@ -272,7 +275,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 	}
 
 	@Override
-	public String visitNode(EmptyTypeNode n){
+	public String visitNode(EmptyNode n){
 	  if (print) printNode(n);
 	  return nlJoin(
 			  "push -1"
@@ -318,9 +321,6 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 				"sub"
 		);
 	}
-
-
-
 	@Override
 	public String visitNode(CallNode n) {
 		if (print) printNode(n,n.id);
@@ -336,6 +336,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 					"stm", // set $tm to popped value (with the aim of duplicating top of stack)
 					"ltm", // load Access Link (pointer to frame of function "id" declaration)
 					"ltm", // duplicate top of stack
+					"lw", //Push on the stack the value of the object pointer (address to the dispatch table)
 					"push "+n.entry.offset, "add", // compute address of "id" declaration
 					"lw", // load address of "id" function
 					"js"  // jump to popped address (saving address of subsequent instruction in $ra)
@@ -362,7 +363,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 	@Override
 	public  String visitNode(NewNode n){
 	  	if (print) printNode(n, n.id_class);
-	  	String argCode = null;
+	  	String argCode = null;//argcode: codice generato dalla visita di ciascun argomento
 	  	for (int i=0;i<n.fields.size();i++) argCode=nlJoin(argCode,visit(n.fields.get(i)));
 	  	String storeInHeap = null;
 		for (int i=0;i<n.fields.size();i++) {
@@ -378,21 +379,17 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 	  	return nlJoin(
 				argCode,
 				storeInHeap,
-				"cfp",//set value of fp to sp(MEMSIZE)
-				"lfp",//Push MEMSIZE on stack
-				"push "+n.entry.offset, //Push ID offset on the stack
+				"push " + ExecuteVM.MEMSIZE,
+				"push "+ n.entry.offset,//Push ID offset on the stack
 				"add", //Calculate the address of the dispatch pointer
-				"lw", //Push the dispatch pointer at the address on the top of the stack
-				"lhp", //Push on the stack the address of HP
-				"sw", //save the dispatch pointer at the address of hp
-				"lhp",//Push on the stack the address of HP
-				"lhp",//Push on the stack the address of HP
-				"push 1",//Push 1 on the stack
-				"add",//Increment hp
-				"shp"//Save incremented hp
-
-
-	  	);
+				"lhp", //load the heap pointer on the stack
+				"sw",
+				"lhp",
+				"lhp",
+				"push 1",
+				"add",
+				"shp"
+				);
 	}
 
 	@Override
@@ -409,19 +406,21 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 				// by following the static chain (of Access Links)
 				"push "+n.entry.offset, "add", // compute address of "id" declaration
 				"lw", // load value of "id" variable
-				"stm", //Set tm of the topped value
+				"stm", //Set $tm to the popped value
 				"ltm",
-				"ltm",//Duplicate the top of the stack
-				"push "+n.methodEntry.offset, "add", //Find ID2 in the dispatch table
+				"ltm", //Duplicate the top of the stack
+				"lw",
 				"lw", // load address of "id" function
+				"push "+n.methodEntry.offset, "add", //Find ID2 in the dispatch table
+				"lw",
 				"js"  // jump to popped address (saving address of subsequent instruction in $ra)
-
 		);
 	}
 
 	@Override
 	public String visitNode(IdNode n) {//quando trova una variabile (dichiarazione locale o oggetto sull'heap)
 		if (print) printNode(n,n.id);
+
 		String getAR = null;
 		for (int i = 0;i<n.nl-n.entry.nl;i++) getAR=nlJoin(getAR,"lw");//per ogni nesting level prende dallo stack un indirizzo, viene letto cosa c'è in quell'indirizzo e viene messo nello stack. Come effetto si ottiene una risalita dei nesting level. AL termine viene preso l'indirizzo della dichiarazione di ID utilizzando l'offset
 		return nlJoin(

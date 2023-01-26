@@ -233,10 +233,8 @@ public class AST {
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
 	}
 
-	public static class ClassNode extends Node{
-
+	public static class ClassNode extends DecNode{//non estende da Node perche sono nodi con le dichiarazioni quindi estende da DecNode
 		String id;
-
 		List<FieldNode> fields;
 		List<MethodNode> methods;
 
@@ -302,10 +300,10 @@ public class AST {
 	public static class NewNode extends Node{
 		String id_class;
 
-		List<FieldNode> fields;
+		List<Node> fields;
 		STentry entry;
 
-		NewNode(String id, List<FieldNode> f){
+		NewNode(String id, List<Node> f){
 			id_class = id;
 			fields = Collections.unmodifiableList(f);
 
